@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Scene } from './components/scene/Scene'
 import { StatusHint, Toast, Tooltip } from './components/ui/Overlays'
+import { Assistant } from './components/ui/Assistant'
 import { Palette } from './components/ui/Palette'
 import { Problems } from './components/ui/Problems'
 import { Properties } from './components/ui/Properties'
@@ -31,6 +32,8 @@ function useShortcuts() {
 
 export function App() {
   useShortcuts()
+  const assistant = useStore((s) => s.assistant)
+  const setAssistant = useStore((s) => s.setAssistant)
   return (
     <div className="flex h-full flex-col">
       <Toolbar />
@@ -46,6 +49,7 @@ export function App() {
           <SchematicPanel />
         </main>
         <Properties />
+        {assistant && <Assistant close={() => setAssistant(false)} />}
       </div>
       <Tooltip />
     </div>

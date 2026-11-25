@@ -60,3 +60,15 @@ a ripple-carry adder/subtractor, a complete truth table, or Boolean equations. I
 logic, compares the chip count with the parts list, and simulates the finished board against the manual's test cases
 before you build. It is rule-based: schematics in pictures, sequential circuits, decoders and displays are not understood,
 but any gate logic can be typed into the box. Code: `src/manual`.
+
+## AI assistant
+
+**Ask AI** opens a chat with Google Gemini (free tier) or Claude (paid) that can read the open circuit, test inputs, and (after you approve) edit or build.
+Each person enters their own API key; it is kept in their browser (for the tab, or on the device if they choose)
+and sent only to that service. Never commit a key or build one into the site. Code: `src/assistant`.
+
+## Tidy wires
+
+Wires are routed automatically in straight, right-angled runs that go around part bodies and never share a lane.
+Left-right and front-back runs lie at two heights, so wires that must cross do not touch. Turn **Tidy Wires** off for
+loose jumper arcs. Code: `src/routing/router.ts`.

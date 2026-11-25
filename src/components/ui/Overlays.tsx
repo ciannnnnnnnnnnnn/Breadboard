@@ -4,6 +4,7 @@ import { compTitle, pinDescription } from '../../data/components'
 import { ICS } from '../../data/ics'
 import type { Level } from '../../data/types'
 import { fmtMA, fmtV } from '../../simulation/simulate'
+import { getRoutes } from '../../routing/router'
 import { useStore } from '../../store/useStore'
 import { ICDiagram } from './ICDiagram'
 
@@ -82,10 +83,12 @@ export function Toast() {
 }
 
 export function StatusHint() {
-  const { running, placing, wireStart, sim } = useStore()
+  const { running, placing, wireStart, sim, circuit, settings } = useStore()
+  const crowded = settings.tidy ? [...getRoutes(circuit).values()].filter((r) => !r.clean).length : 0
   const text = placing ? 'Click the board to place. R rotates, Esc cancels'
     : wireStart ? `Wire from ${wireStart.from[0] === '@' ? 'terminal' : wireStart.from}: click a hole to finish, Shift+click adds a bend, Esc cancels`
     : running ? `Running · supply ${fmtMA(sim?.supplyCurrent ?? 0)} · 1 = green, 0 = dark, floating = grey dashes`
     : 'Stopped'
-  return <div className="pointer-events-none absolute right-3 bottom-3 z-30 rounded bg-slate-950/75 px-2 py-1 text-[11px] text-slate-300" data-testid="status">{text}</div>
+  const note = crowded ? ` · ${crowded} ${crowded === 1 ? 'wire has' : 'wires have'} no clear path: spread the parts out` : ''
+  return <div className="pointer-events-none absolute right-3 bottom-3 z-30 rounded bg-slate-950/75 px-2 py-1 text-[11px] text-slate-300" data-testid="status">{text}{note}</div>
 }

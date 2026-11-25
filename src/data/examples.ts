@@ -1,3 +1,5 @@
+import { textToDesign } from '../manual/expr'
+import { synthesize } from '../manual/synthesize'
 import { Builder } from './builder'
 import type { Circuit } from './types'
 
@@ -82,5 +84,22 @@ export const EXAMPLES: Example[] = [
       })
       return b.c
     },
+  },
+  {
+    id: 'nand7', name: 'All 7 gates from NAND only', description: 'Every gate built from 7400 chips. Set A and B on the DIP switch',
+    build: () => synthesize(textToDesign(`title: All 7 gates from NAND only
+inputs: A, B
+NA = A NAND A
+NB = B NAND B
+L_NAND = A NAND B
+L_AND = L_NAND NAND L_NAND
+L_OR = NA NAND NB
+L_NOR = L_OR NAND L_OR
+M1 = A NAND L_NAND
+M2 = B NAND L_NAND
+L_XOR = M1 NAND M2
+L_XNOR = L_XOR NAND L_XOR
+L_NOT = NA
+outputs: L_NOT red, L_AND orange, L_OR yellow, L_NAND green, L_NOR blue, L_XOR white, L_XNOR red`)).circuit,
   },
 ]

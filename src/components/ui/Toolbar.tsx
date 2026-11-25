@@ -53,6 +53,7 @@ export function Toolbar() {
       <button className={`btn ${s.checking ? 'border-amber-500 text-amber-300' : ''}`} aria-pressed={s.checking} title="Find problems without running" onClick={() => s.setChecking(!s.checking)}>Check Circuit</button>
       <Switch label="Show IC Internals" on={s.settings.internals} set={(v) => s.setSetting('internals', v)} />
       <Switch label="Current Labels" on={s.settings.labels} set={(v) => s.setSetting('labels', v)} />
+      <Switch label="Tidy Wires" on={s.settings.tidy} set={(v) => s.setSetting('tidy', v)} />
       <Switch label="Pin Badges" on={s.settings.badges} set={(v) => s.setSetting('badges', v)} />
       <button className={`btn ${s.topView ? 'border-sky-500 text-sky-300' : ''}`} onClick={() => s.setView(!s.topView)} aria-pressed={s.topView}>Top View</button>
       <div className="flex gap-1">
@@ -65,6 +66,7 @@ export function Toolbar() {
         <button className="btn px-2" aria-label="Add breadboard" disabled={s.running || boards >= MAX_BOARDS} onClick={s.addBoard}>+</button>
       </div>
       <button className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-white hover:bg-sky-500" onClick={() => setManual(true)}>Build from Manual</button>
+      <button className={`rounded-md px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-white ${s.assistant ? 'bg-violet-500' : 'bg-violet-700 hover:bg-violet-600'}`} aria-pressed={s.assistant} onClick={() => s.setAssistant(!s.assistant)}>Ask AI</button>
       {manual && <ManualImport close={() => setManual(false)} />}
       <div className="ml-auto flex flex-wrap items-center gap-1">
         <select

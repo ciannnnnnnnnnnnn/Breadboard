@@ -96,6 +96,18 @@ describe('examples', () => {
   })
 })
 
+describe('all gates from NAND', () => {
+  it('uses only 7400 chips and matches every truth table', () => {
+    const c = EXAMPLES.find((e) => e.id === 'nand7')!.build()
+    const parts = new Set(c.components.filter((x) => x.type === 'ic').map((x) => x.props.part))
+    expect([...parts]).toEqual(['7400'])
+    for (const a of [0, 1] as const) for (const q of [0, 1] as const) {
+      const s: Circuit = { ...c, components: c.components.map((x) => (x.type === 'dip4' ? { ...x, props: { ...x.props, switches: x.props.switches!.map((_, i) => !!(i === 0 ? a : i === 1 && q)) } } : x)) }
+      for (const d of Object.values(ICS)) expect(`${d.gateType}:${ledOn(s, 'L_' + d.gateType)}`).toBe(`${d.gateType}:${evalGate(d.gateType, d.gateType === 'NOT' ? [a] : [a, q])}`)
+    }
+  })
+})
+
 describe('simulation behaviour', () => {
   const chip = (part: string, powerIt = true) => {
     const b = new Builder()

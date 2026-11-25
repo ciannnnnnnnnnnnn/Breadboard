@@ -10,7 +10,7 @@ describe('schematic layout', () => {
       expect(a.y + a.h <= b.y || b.y + b.h <= a.y).toBe(true)
     }
     const rank = (k: string) => Math.max(...s.elems.filter((e) => e.kind === k).map((e) => e.rank))
-    expect(rank('toggle')).toBeLessThan(rank('gate'))
+    if (s.elems.some((e) => e.kind === 'toggle')) expect(rank('toggle')).toBeLessThan(rank('gate'))
     expect(rank('gate')).toBeLessThan(rank('resistor'))
     expect(rank('resistor')).toBeLessThan(rank('led'))
   })

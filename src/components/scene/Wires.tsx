@@ -9,6 +9,8 @@ import { fmtMA } from '../../simulation/simulate'
 import { PROBLEM_COLOR, useProblemSeverity } from '../../store/problems'
 import { useStore, wireColorName } from '../../store/useStore'
 import { TERMINAL_Y } from './parts/Power'
+import { getRoutes } from '../../routing/router'
+import { TIDY_R, pathLength, pathPoint, polyTube, tidyPath } from './wireGeometry'
 import { boardPoint, drag } from './shared'
 
 /** 3D position of a wire end */
@@ -65,18 +67,25 @@ function WireMesh({ wire }: { wire: Wire }) {
   const A = endPos(wire.from, circuit), B = endPos(wire.to, circuit)
   const a = override?.which === 'from' ? override.p : A
   const b = override?.which === 'to' ? override.p : B
-  const key = a && b ? `${a.toArray()}|${b.toArray()}|${wire.bends}` : ''
+  const tidy = useStore((s) => s.settings.tidy)
+  // while an end is being dragged the wire is drawn as a loose arc
+  const route = tidy && !override ? getRoutes(circuit).get(wire.id) : undefined
+  const key = a && b ? `${a.toArray()}|${b.toArray()}|${wire.bends}|${route?.points.join(';') ?? ''}` : ''
 
   const geo = useMemo(() => {
     if (!a || !b) return null
+    if (route) {
+      const p = tidyPath(route.points, a.y, b.y)
+      return { len: pathLength(p), tube: polyTube(p, TIDY_R), glow: polyTube(p, TIDY_R + 0.012), hit: polyTube(p, 0.16, 5) }
+    }
     const curve = wireCurve(a, b, wire.bends)
     const len = curve.getLength()
     const seg = Math.min(120, Math.max(32, Math.round(len * 3)))
-    return { len, tube: new THREE.TubeGeometry(curve, seg, 0.17, 10), glow: new THREE.TubeGeometry(curve, seg, 0.185, 10) }
+    return { len, tube: new THREE.TubeGeometry(curve, seg, 0.17, 10), glow: new THREE.TubeGeometry(curve, seg, 0.185, 10), hit: null }
     // key captures everything the curve depends on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
-  useEffect(() => () => { geo?.tube.dispose(); geo?.glow.dispose() }, [geo])
+  useEffect(() => () => { geo?.tube.dispose(); geo?.glow.dispose(); geo?.hit?.dispose() }, [geo])
 
   const mat = useMemo(() => new THREE.ShaderMaterial({
     ...overlayShader, transparent: true, depthWrite: false, toneMapped: false,
@@ -120,18 +129,19 @@ function WireMesh({ wire }: { wire: Wire }) {
   }
   return (
     <group>
-      <mesh geometry={geo.tube} castShadow {...handlers}>
+      {geo.hit && <mesh geometry={geo.hit} {...handlers}><meshBasicMaterial transparent opacity={0} depthWrite={false} /></mesh>}
+      <mesh geometry={geo.tube} castShadow {...(geo.hit ? { raycast: noRay } : handlers)}>
         <meshStandardMaterial ref={body} color={problem ? PROBLEM_COLOR[problem] : base} roughness={0.5} emissive={problem ? PROBLEM_COLOR[problem] : selected || hovered ? '#1b6fff' : '#000'} emissiveIntensity={selected ? 0.8 : 0.3} />
       </mesh>
       {mode > 0 && !problem && <mesh geometry={geo.glow} material={mat} raycast={noRay} />}
       {[a, b].map((p, i) => (
         <group key={i} position={p}>
-          <mesh position={[0, 0.25, 0]} raycast={noRay}>
-            <cylinderGeometry args={[0.1, 0.07, 0.6, 8]} />
+          <mesh position={[0, route ? 0.1 : 0.25, 0]} raycast={noRay}>
+            <cylinderGeometry args={route ? [0.085, 0.07, 0.3, 8] : [0.1, 0.07, 0.6, 8]} />
             <meshStandardMaterial color="#d5d8de" metalness={0.9} roughness={0.3} />
           </mesh>
-          <mesh position={[0, 0.62, 0]} raycast={noRay}>
-            <cylinderGeometry args={[0.22, 0.22, 0.55, 10]} />
+          <mesh position={[0, route ? 0.17 : 0.62, 0]} raycast={noRay}>
+            <cylinderGeometry args={route ? [0.13, 0.13, 0.2, 10] : [0.22, 0.22, 0.55, 10]} />
             <meshStandardMaterial color="#17181b" roughness={0.6} />
           </mesh>
         </group>
@@ -188,13 +198,14 @@ function WireCurrents() {
     if (!sim || !settings.labels) return []
     const strips = new Set<string>()
     for (const c of circuit.components) if (c.type === 'resistor') for (const p of Object.values(netlist.pins.get(c.id) ?? {})) strips.add(p.strip)
+    const routes = settings.tidy ? getRoutes(circuit) : null
     return circuit.wires.flatMap((w) => {
       const st = sim.wires[w.id]
       if (!st || st.current < 1e-6 || (!strips.has(stripOfEnd(w.from)) && !strips.has(stripOfEnd(w.to)))) return []
       const a = endPos(w.from, circuit), b = endPos(w.to, circuit)
-      return a && b ? [{ id: w.id, p: wireCurve(a, b, w.bends).getPoint(0.5), i: st.current }] : []
+      return a && b ? [{ id: w.id, p: routes?.get(w.id) ? pathPoint(tidyPath(routes.get(w.id)!.points, a.y, b.y), 0.5) : wireCurve(a, b, w.bends).getPoint(0.5), i: st.current }] : []
     })
-  }, [circuit, sim, settings.labels, netlist])
+  }, [circuit, sim, settings.labels, settings.tidy, netlist])
   return list.map((l) => (
     <Html key={l.id} position={l.p} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
       <div data-testid="wire-current" className="rounded bg-slate-950/85 px-1 font-mono text-[10px] whitespace-nowrap text-emerald-300">{fmtMA(l.i)}</div>

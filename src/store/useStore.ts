@@ -7,7 +7,7 @@ import type { Circuit, Comp, CompProps, CompType, Level, Wire } from '../data/ty
 import { buildNetlist, powerNets, type Netlist } from '../simulation/netlist'
 import { simulateWithBurn, type SimResult } from '../simulation/simulate'
 
-export interface Settings { internals: boolean; labels: boolean; badges: boolean }
+export interface Settings { internals: boolean; labels: boolean; badges: boolean; tidy: boolean }
 export type Selection = { kind: 'comp' | 'wire'; id: string } | null
 export type Hover =
   | { kind: 'hole'; hole: string }
@@ -39,6 +39,7 @@ interface State {
   hover: Hover
   toast: { msg: string; n: number } | null
   schematicOpen: boolean
+  assistant: boolean
   /** show problems while stopped */
   checking: boolean
   activeProblem: string | null
@@ -71,6 +72,7 @@ interface State {
   setSchematicOpen: (v: boolean) => void
   setName: (n: string) => void
   setChecking: (v: boolean) => void
+  setAssistant: (v: boolean) => void
   addBoard: () => void
   removeBoard: () => void
   setActiveProblem: (key: string | null, at: [number, number] | null) => void
@@ -138,7 +140,7 @@ function initial(): { circuit: Circuit; name: string } {
   return { circuit: EXAMPLES[0].build(), name: EXAMPLES[0].name }
 }
 function initialSettings(): Settings {
-  const d = { internals: false, labels: true, badges: false }
+  const d = { internals: false, labels: true, badges: false, tidy: true }
   try { return { ...d, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') } } catch { return d }
 }
 
@@ -189,7 +191,7 @@ export const useStore = create<State>((set, get) => {
     settings: initialSettings(),
     topView: false, viewNonce: 0,
     selection: null, placing: null, wireStart: null, wireColor: 'auto', hover: null, toast: null,
-    schematicOpen: true, checking: false, activeProblem: null, focus: null,
+    schematicOpen: true, assistant: false, checking: false, activeProblem: null, focus: null,
 
     say: (msg) => set((s) => ({ toast: { msg, n: (s.toast?.n ?? 0) + 1 } })),
     load: (circuit, name) => set((s) => ({
@@ -300,7 +302,7 @@ export const useStore = create<State>((set, get) => {
       const comp = get().circuit.components.find((q) => q.id === id)
       if (!comp) return
       const props = comp.type === 'dip4'
-        ? { switches: (comp.props.switches ?? []).map((v, i) => (i === (index ?? 0) ? !v : v)) }
+        ? { switches: (comp.props.switches ?? []).map((v, i) => (i === (index ?? 0) ? (value ?? !v) : v)) }
         : { on: value ?? !comp.props.on }
       apply(mapComp(id, (c) => ({ ...c, props: { ...c.props, ...props } })), false)
     },
@@ -355,6 +357,7 @@ export const useStore = create<State>((set, get) => {
       apply({ ...s.circuit, boards: last })
       set((q) => ({ viewNonce: q.viewNonce + 1 }))
     },
+    setAssistant: (assistant) => set({ assistant }),
     setChecking: (checking) => set({ checking, activeProblem: null }),
     setActiveProblem: (activeProblem, at) => set((s) => ({ activeProblem, focus: at ? { x: at[0], z: at[1], n: (s.focus?.n ?? 0) + 1 } : s.focus })),
   }
